@@ -12,7 +12,6 @@
  * Usage   : ./patient_simulator <patient_id> <priority> <bed_id> <bed_type>
  * ============================================================
  */
-
 #include "hospital.h"
 
 int main(int argc, char *argv[])
@@ -23,59 +22,59 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    int patientId = atoi(argv[1]);
-    int triagePriority = atoi(argv[2]);
-    int assignedBedId = atoi(argv[3]);
-    char *assignedBedType = argv[4];
+    int uid         = atoi(argv[1]);
+    int severity    = atoi(argv[2]);
+    int slot_num    = atoi(argv[3]);
+    char *ward_zone = argv[4];
 
     srand((unsigned)(time(NULL) ^ getpid()));
 
-    int minDuration, maxDuration;
+    int min_recovery, max_recovery;
 
-    if (strcmp(assignedBedType, "ICU") == 0)
+    if (strcmp(ward_zone, "ICU") == 0)
     {
-        minDuration = 5;
-        maxDuration = 15;
+        min_recovery = 5;
+        max_recovery = 15;
     }
-    else if (strcmp(assignedBedType, "ISOLATION") == 0)
+    else if (strcmp(ward_zone, "ISOLATION") == 0)
     {
-        minDuration = 3;
-        maxDuration = 10;
+        min_recovery = 3;
+        max_recovery = 10;
     }
     else
     {
-        minDuration = 2;
-        maxDuration = 8;
+        min_recovery = 2;
+        max_recovery = 8;
     }
 
-    int treatmentDuration = minDuration + rand() % (maxDuration - minDuration + 1);
+    int recovery_secs = min_recovery + rand() % (max_recovery - min_recovery + 1);
 
-    printf("[PATIENT %d] Arrived    | Priority=%d | Bed=%d (%s)\n",
-           patientId, triagePriority, assignedBedId, assignedBedType);
+    printf("[PATIENT %d] Arrived    | Severity=%d | Slot=%d (%s)\n",
+           uid, severity, slot_num, ward_zone);
     fflush(stdout);
 
     printf("[PATIENT %d] Treatment  | Duration=%d seconds\n",
-           patientId, treatmentDuration);
+           uid, recovery_secs);
     fflush(stdout);
 
-    sleep(treatmentDuration);
+    sleep(recovery_secs);
 
-    printf("[PATIENT %d] Discharged | Bed=%d now free\n",
-           patientId, assignedBedId);
+    printf("[PATIENT %d] Discharged | Slot=%d now free\n",
+           uid, slot_num);
     fflush(stdout);
 
-    int fifoDescriptor = open(DISCHARGE_FIFO, O_WRONLY);
-    if (fifoDescriptor < 0)
+    int fifo_fd = open(DISCHARGE_FIFO, O_WRONLY);
+    if (fifo_fd < 0)
     {
         perror("[PATIENT] open FIFO failed");
         return 1;
     }
 
-    write(fifoDescriptor, &patientId, sizeof(int));
-    write(fifoDescriptor, &assignedBedId, sizeof(int));
-    close(fifoDescriptor);
+    write(fifo_fd, &uid,      sizeof(int));
+    write(fifo_fd, &slot_num, sizeof(int));
+    close(fifo_fd);
 
-    printf("[PATIENT %d] Discharge notification sent\n", patientId);
+    printf("[PATIENT %d] Discharge notification sent\n", uid);
     fflush(stdout);
 
     return 0;
