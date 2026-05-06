@@ -374,6 +374,16 @@ void setup_ipc(void) {
     printf("[IPC] Ready (key=0x%X)\n", SHM_KEY);
 }
 
+void setStrategy(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--strategy") == 0 && i + 1 < argc) {
+            if (strcmp(argv[i+1], "first") == 0) strategy = STRAT_FIRST;
+            else if (strcmp(argv[i+1], "worst") == 0) strategy = STRAT_WORST;
+            i++;
+        }
+    }
+}
+
 /* Cleanup IPC resources */
 void cleanup_ipc(void) {
     if (ward_shared_memory) {
@@ -396,6 +406,7 @@ void cleanup_ipc(void) {
     }
     printf("[IPC] Cleanup complete\n");
 }
+
 
 int main(int argc, char *argv[]) {
     setStrategy(argc, argv);
