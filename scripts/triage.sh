@@ -52,7 +52,6 @@ if [ ! -p /tmp/discharge_fifo ]; then
     exit 1
 fi
 
-# Pack and pipe patient record to admissions
 python3 -c "
 import struct, sys
 
@@ -70,6 +69,6 @@ else:
 
 data = struct.pack('i64siiiiql', 0, name, age, severity, priority, care, $ARRIVAL, 0)
 sys.stdout.buffer.write(data)
-" | ./admissions &
+" >> /proc/$(cat /tmp/hospital_pid)/fd/0
 
 echo "Patient record sent"
