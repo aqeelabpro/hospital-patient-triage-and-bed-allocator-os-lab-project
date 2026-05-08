@@ -7,8 +7,6 @@
 *.obj
 *.elf
 
-logs/
-
 # Linker output
 *.ilk
 *.map
