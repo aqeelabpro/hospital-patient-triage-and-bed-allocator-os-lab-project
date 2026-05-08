@@ -1,8 +1,8 @@
 # Hospital Patient Triage & Bed Allocator
 
 **Project:** CL2006 Operating Systems Lab Semester Project  
-**Group:** Group XX  
-**Members:** Member1 (24P-XXXX), Member2 (24P-YYYY)  
+**Group:** Group 22  
+**Members:** Member1 (24P-0514), Member2 (24P-0666)  
 **Date:** Spring 2026
 
 ## Overview
