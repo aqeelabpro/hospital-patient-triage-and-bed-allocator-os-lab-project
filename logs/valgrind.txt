@@ -1,0 +1,129 @@
+==159317== Memcheck, a memory error detector
+==159317== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==159317== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
+==159317== Command: ./admissions --strategy best
+==159317== Parent PID: 159311
+==159317== 
+==154495== 
+==154495== Process terminating with default action of signal 1 (SIGHUP)
+==154495==    at 0x4911D71: __futex_abstimed_wait_common64 (futex-internal.c:57)
+==154495==    by 0x4911D71: __futex_abstimed_wait_common (futex-internal.c:87)
+==154495==    by 0x4911D71: __futex_abstimed_wait_cancelable64 (futex-internal.c:139)
+==154495==    by 0x49177A2: __pthread_clockjoin_ex (pthread_join_common.c:102)
+==154495==    by 0x10B30E: main (admissions.c:381)
+==154495== 
+==154495== HEAP SUMMARY:
+==154495==     in use at exit: 5,671 bytes in 12 blocks
+==154495==   total heap usage: 12 allocs, 0 frees, 5,671 bytes allocated
+==154495== 
+==154495== 24 bytes in 1 blocks are still reachable in loss record 1 of 12
+==154495==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==154495==    by 0x49A1510: tsearch (tsearch.c:337)
+==154495==    by 0x491DB16: __sem_check_add_mapping (sem_routines.c:121)
+==154495==    by 0x491D799: sem_open@@GLIBC_2.34 (sem_open.c:194)
+==154495==    by 0x10AFF1: init_ipc (admissions.c:342)
+==154495==    by 0x10B25D: main (admissions.c:372)
+==154495== 
+==154495== 24 bytes in 1 blocks are still reachable in loss record 2 of 12
+==154495==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==154495==    by 0x49A1571: tsearch (tsearch.c:337)
+==154495==    by 0x491DB16: __sem_check_add_mapping (sem_routines.c:121)
+==154495==    by 0x491D799: sem_open@@GLIBC_2.34 (sem_open.c:194)
+==154495==    by 0x10B01B: init_ipc (admissions.c:343)
+==154495==    by 0x10B25D: main (admissions.c:372)
+==154495== 
+==154495== 24 bytes in 1 blocks are still reachable in loss record 3 of 12
+==154495==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==154495==    by 0x49A1571: tsearch (tsearch.c:337)
+==154495==    by 0x491DB16: __sem_check_add_mapping (sem_routines.c:121)
+==154495==    by 0x491D799: sem_open@@GLIBC_2.34 (sem_open.c:194)
+==154495==    by 0x10B045: init_ipc (admissions.c:344)
+==154495==    by 0x10B25D: main (admissions.c:372)
+==154495== 
+==154495== 47 bytes in 1 blocks are still reachable in loss record 4 of 12
+==154495==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==154495==    by 0x491DA9F: __sem_check_add_mapping (sem_routines.c:104)
+==154495==    by 0x491D799: sem_open@@GLIBC_2.34 (sem_open.c:194)
+==154495==    by 0x10AFF1: init_ipc (admissions.c:342)
+==154495==    by 0x10B25D: main (admissions.c:372)
+==154495== 
+==154495== 47 bytes in 1 blocks are still reachable in loss record 5 of 12
+==154495==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==154495==    by 0x491DA9F: __sem_check_add_mapping (sem_routines.c:104)
+==154495==    by 0x491D799: sem_open@@GLIBC_2.34 (sem_open.c:194)
+==154495==    by 0x10B01B: init_ipc (admissions.c:343)
+==154495==    by 0x10B25D: main (admissions.c:372)
+==154495== 
+==154495== 49 bytes in 1 blocks are still reachable in loss record 6 of 12
+==154495==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==154495==    by 0x491DA9F: __sem_check_add_mapping (sem_routines.c:104)
+==154495==    by 0x491D799: sem_open@@GLIBC_2.34 (sem_open.c:194)
+==154495==    by 0x10B045: init_ipc (admissions.c:344)
+==154495==    by 0x10B25D: main (admissions.c:372)
+==154495== 
+==154495== 272 bytes in 1 blocks are possibly lost in loss record 7 of 12
+==154495==    at 0x484D953: calloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==154495==    by 0x40145AB: calloc (rtld-malloc.h:44)
+==154495==    by 0x40145AB: allocate_dtv (dl-tls.c:370)
+==154495==    by 0x40145AB: _dl_allocate_tls (dl-tls.c:629)
+==154495==    by 0x4916616: allocate_stack (allocatestack.c:429)
+==154495==    by 0x4916616: pthread_create@@GLIBC_2.34 (pthread_create.c:655)
+==154495==    by 0x10B27A: main (admissions.c:375)
+==154495== 
+==154495== 272 bytes in 1 blocks are possibly lost in loss record 8 of 12
+==154495==    at 0x484D953: calloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==154495==    by 0x40145AB: calloc (rtld-malloc.h:44)
+==154495==    by 0x40145AB: allocate_dtv (dl-tls.c:370)
+==154495==    by 0x40145AB: _dl_allocate_tls (dl-tls.c:629)
+==154495==    by 0x4916616: allocate_stack (allocatestack.c:429)
+==154495==    by 0x4916616: pthread_create@@GLIBC_2.34 (pthread_create.c:655)
+==154495==    by 0x10B297: main (admissions.c:376)
+==154495== 
+==154495== 272 bytes in 1 blocks are possibly lost in loss record 9 of 12
+==154495==    at 0x484D953: calloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==154495==    by 0x40145AB: calloc (rtld-malloc.h:44)
+==154495==    by 0x40145AB: allocate_dtv (dl-tls.c:370)
+==154495==    by 0x40145AB: _dl_allocate_tls (dl-tls.c:629)
+==154495==    by 0x4916616: allocate_stack (allocatestack.c:429)
+==154495==    by 0x4916616: pthread_create@@GLIBC_2.34 (pthread_create.c:655)
+==154495==    by 0x10B2B9: main (admissions.c:377)
+==154495== 
+==154495== 272 bytes in 1 blocks are possibly lost in loss record 10 of 12
+==154495==    at 0x484D953: calloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==154495==    by 0x40145AB: calloc (rtld-malloc.h:44)
+==154495==    by 0x40145AB: allocate_dtv (dl-tls.c:370)
+==154495==    by 0x40145AB: _dl_allocate_tls (dl-tls.c:629)
+==154495==    by 0x4916616: allocate_stack (allocatestack.c:429)
+==154495==    by 0x4916616: pthread_create@@GLIBC_2.34 (pthread_create.c:655)
+==154495==    by 0x10B2DB: main (admissions.c:378)
+==154495== 
+==154495== 272 bytes in 1 blocks are possibly lost in loss record 11 of 12
+==154495==    at 0x484D953: calloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==154495==    by 0x40145AB: calloc (rtld-malloc.h:44)
+==154495==    by 0x40145AB: allocate_dtv (dl-tls.c:370)
+==154495==    by 0x40145AB: _dl_allocate_tls (dl-tls.c:629)
+==154495==    by 0x4916616: allocate_stack (allocatestack.c:429)
+==154495==    by 0x4916616: pthread_create@@GLIBC_2.34 (pthread_create.c:655)
+==154495==    by 0x10B2FD: main (admissions.c:379)
+==154495== 
+==154495== 4,096 bytes in 1 blocks are still reachable in loss record 12 of 12
+==154495==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==154495==    by 0x48FE1B4: _IO_file_doallocate (filedoalloc.c:101)
+==154495==    by 0x490E523: _IO_doallocbuf (genops.c:347)
+==154495==    by 0x490BF8F: _IO_file_overflow@@GLIBC_2.2.5 (fileops.c:745)
+==154495==    by 0x490CAAE: _IO_new_file_xsputn (fileops.c:1244)
+==154495==    by 0x490CAAE: _IO_file_xsputn@@GLIBC_2.2.5 (fileops.c:1197)
+==154495==    by 0x48D9CC8: __printf_buffer_flush_to_file (printf_buffer_to_file.c:59)
+==154495==    by 0x48D9CC8: __printf_buffer_to_file_done (printf_buffer_to_file.c:120)
+==154495==    by 0x48E4742: __vfprintf_internal (vfprintf-internal.c:1545)
+==154495==    by 0x48D91B2: printf (printf.c:33)
+==154495==    by 0x10B208: main (admissions.c:365)
+==154495== 
+==154495== LEAK SUMMARY:
+==154495==    definitely lost: 0 bytes in 0 blocks
+==154495==    indirectly lost: 0 bytes in 0 blocks
+==154495==      possibly lost: 1,360 bytes in 5 blocks
+==154495==    still reachable: 4,311 bytes in 7 blocks
+==154495==         suppressed: 0 bytes in 0 blocks
+==154495== 
+==154495== For lists of detected and suppressed errors, rerun with: -s
