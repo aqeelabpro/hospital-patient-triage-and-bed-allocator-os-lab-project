@@ -48,19 +48,6 @@ void init_ward(void) {
            ICU_BEDS, ISOLATION_BEDS, GENERAL_BEDS, TOTAL_BEDS, TOTAL_UNITS);
 }
 
-int find_bed_best_strategy(int care, const char *type) {
-    int best = -1, best_size = 9999;
-    for (int i = 0; i < TOTAL_BEDS; i++) {
-        BedPartition *b = &ward_shared_memory->beds[i];
-        if (b->is_free && strcmp(b->bed_type, type) == 0 && 
-            b->size >= care && b->size < best_size) {
-            best = i; 
-            best_size = b->size;
-        }
-    }
-    return best;
-}
-
 int find_bed_first_strategy(int care, const char *type) {
     for (int i = 0; i < TOTAL_BEDS; i++) {
         BedPartition *b = &ward_shared_memory->beds[i];
@@ -70,15 +57,35 @@ int find_bed_first_strategy(int care, const char *type) {
     return -1;
 }
 
+int find_bed_best_strategy(int care, const char *type) {
+    int best = -1, best_size = 9999;
+    for (int i = 0; i < TOTAL_BEDS; i++) {
+        BedPartition *b = &ward_shared_memory->beds[i];
+        if (b->is_free && strcmp(b->bed_type, type) == 0 &&
+            b->size >= care && b->size < best_size) {
+            best = i;
+            best_size = b->size;
+        }
+    }
+    // TODO: currently only checks size, ideally should also consider
+    // location locality (nearby beds for same patient group) but
+    // bed array does not store ward section info separately
+    return best;
+}
+
 int find_bed_worst_strategy(int care, const char *type) {
     int worst = -1, worst_size = -1;
     for (int i = 0; i < TOTAL_BEDS; i++) {
         BedPartition *b = &ward_shared_memory->beds[i];
-        if (b->is_free && strcmp(b->bed_type, type) == 0 && 
+        if (b->is_free && strcmp(b->bed_type, type) == 0 &&
             b->size >= care && b->size > worst_size) {
             worst = i; worst_size = b->size;
         }
     }
+    // TODO: worst-fit is intentional here (picks largest free bed to leave
+    // bigger remaining chunks) but we did not implement splitting - ideally
+    // after placing patient in a large bed, the leftover units should become
+    // a new smaller partition. splitting logic not completed due to time constraints.
     return worst;
 }
 
@@ -102,22 +109,21 @@ void free_bed(int bed_idx) {
     b->patient_id = -1;
     for (int u = b->start_unit; u < b->start_unit + b->size; u++)
         ward_shared_memory->ward[u] = -1;
-    
-    /*
-    Incomplete
 
-    // Coalesce left
-    if (bed_idx > 0 && ward_shared_memory->beds[bed_idx-1].is_free && 
-        strcmp(ward_shared_memory->beds[bed_idx-1].bed_type, b->bed_type) == 0) {
-       
-    }
-    // Coalesce right
-    if (bed_idx + 1 < TOTAL_BEDS && ward_shared_memory->beds[bed_idx+1].is_free && 
-        strcmp(ward_shared_memory->beds[bed_idx+1].bed_type, b->bed_type) == 0 && 
-       
+    // TODO: Coalesce adjacent free partitions of same type
+    // Attempted but incomplete - merge logic causes unit index corruption
+    // when beds are non-contiguous after multiple alloc/free cycles
+    /*
+    if (bed_idx > 0) {
+        BedPartition *prev = &ward_shared_memory->beds[bed_idx - 1];
+        if (prev->is_free && strcmp(prev->bed_type, b->bed_type) == 0) {
+            // merge prev into b
+            // prev->size += b->size;
+            // need to shift bed array - not implemented
+        }
     }
     */
-    
+
     printf("[COALESCE] Bed %d freed\n", bed_idx);
 }
 
@@ -128,13 +134,18 @@ void report_fragmentation(void) {
         else { if (cur > largest) largest = cur; cur = 0; }
     }
     if (cur > largest) largest = cur;
-    
+
     double frag = (total > 0) ? (1.0 - (double)largest / total) * 100.0 : 0.0;
     printf("[FRAG] Free=%d Largest=%d ExtFrag=%.1f%%\n", total, largest, frag);
-    
+
     FILE *fp = fopen("logs/memory_log.txt", "a");
     if (fp) {
         fprintf(fp, "Free=%d Largest=%d ExtFrag=%.1f%%\n", total, largest, frag);
+
+        // TODO: per-ward fragmentation breakdown (ICU / ISO / GENERAL separately)
+        // tried splitting ward[] into ranges but off-by-one errors in unit boundaries
+        // fprintf(fp, "ICU_Frag=? ISO_Frag=? GEN_Frag=?\n");
+
         fclose(fp);
     }
 }
@@ -150,7 +161,7 @@ void pq_enqueue(PatientRecord *rec) {
     PriorityQueue *node = malloc(sizeof(PriorityQueue));
     node->rec = *rec;
     node->next = NULL;
-    
+
     pthread_mutex_lock(&priority_queue_mutex);
     if (!priority_queue_head || rec->priority < priority_queue_head->rec.priority) {
         node->next = priority_queue_head;
@@ -191,27 +202,39 @@ void sigterm_handler(int sig) {
 void write_schedule_log(void) {
     FILE *fp = fopen("logs/schedule_log.txt", "w");
     if (!fp) return;
-    
+
     fprintf(fp, "PID | Priority | Arrival | Start | Finish | Wait | Turnaround\n");
     double total_wait = 0, total_ta = 0;
-    
+
     for (int i = 0; i < schedule_count; i++) {
         double wait = schedule_log[i].start - schedule_log[i].arrival;
-        double ta = schedule_log[i].finish - schedule_log[i].arrival;
+        double ta   = schedule_log[i].finish - schedule_log[i].arrival;
         total_wait += wait;
-        total_ta += ta;
+        total_ta   += ta;
         fprintf(fp, "%d | %d | %.1f | %.1f | %.1f | %.1f | %.1f\n",
                 schedule_log[i].patient_id, schedule_log[i].priority,
-                schedule_log[i].arrival, schedule_log[i].start, schedule_log[i].finish,
-                wait, ta);
+                schedule_log[i].arrival, schedule_log[i].start,
+                schedule_log[i].finish, wait, ta);
     }
-    
+
     if (schedule_count > 0) {
         fprintf(fp, "\nAvg Wait=%.2fs | Avg Turnaround=%.2fs\n",
                 total_wait / schedule_count, total_ta / schedule_count);
         printf("[SCHED] Avg Wait=%.2fs | Avg TA=%.2fs\n",
                total_wait / schedule_count, total_ta / schedule_count);
     }
+
+    // TODO: Gantt chart output - planned but not completed
+    // Idea was to write ASCII blocks per patient showing timeline
+    // Could not figure out scaling when treatment durations vary widely
+    /*
+    fprintf(fp, "\n--- Gantt Chart (incomplete) ---\n");
+    for (int i = 0; i < schedule_count; i++) {
+        fprintf(fp, "P%d |", schedule_log[i].patient_id);
+        // for (int t = 0; t < schedule_log[i].finish; t++) { ... }
+    }
+    */
+
     fclose(fp);
 }
 
@@ -254,17 +277,17 @@ void *scheduler_thread(void *arg) {
     (void)arg;
     printf("[SCHED] Started\n");
     static double sim_time = 0.0;
-    
+
     while (!shutdown_flag) {
         pthread_mutex_lock(&priority_queue_mutex);
         while (!priority_queue_head && !shutdown_flag)
             pthread_cond_wait(&priority_queue_cond, &priority_queue_mutex);
-        
+
         if (shutdown_flag) {
             pthread_mutex_unlock(&priority_queue_mutex);
             break;
         }
-        
+
         PatientRecord rec;
         if (!pq_dequeue(&rec)) {
             pthread_mutex_unlock(&priority_queue_mutex);
@@ -278,19 +301,32 @@ void *scheduler_thread(void *arg) {
         rec.care_units = care;
 
         sem_t *cap = NULL;
-        if (strcmp(btype, "ICU") == 0) cap = sem_icu;
+        if (strcmp(btype, "ICU") == 0)       cap = sem_icu;
         if (strcmp(btype, "ISOLATION") == 0) cap = sem_iso;
-        
+
+        /* Try to acquire capacity semaphore without blocking.
+         * If the ward is full, re-enqueue the patient and move on
+         * so lower-priority patients in other wards are not starved. */
         if (cap) {
-            printf("[SCHED] Patient %d waiting for %s capacity\n", rec.patient_id, btype);
-            sem_wait(cap);
+            if (sem_trywait(cap) != 0) {
+                printf("[SCHED] Patient %d: %s full, re-queuing\n",
+                       rec.patient_id, btype);
+                sleep(1);
+                pq_enqueue(&rec);   /* pq_enqueue handles its own locking */
+                continue;
+            }
         }
 
+        /* Find and occupy a bed. If none found (should not happen after
+         * semaphore check, but guard anyway), release semaphore and re-queue. */
         pthread_mutex_lock(&bed_mutex);
-        int bed_idx = -1;
-        while ((bed_idx = allocate_bed(care, btype)) == -1) {
-            printf("[SCHED] No %s bed available, waiting\n", btype);
-            pthread_cond_wait(&bed_freed, &bed_mutex);
+        int bed_idx = allocate_bed(care, btype);
+        if (bed_idx == -1) {
+            pthread_mutex_unlock(&bed_mutex);
+            if (cap) sem_post(cap);
+            sleep(1);
+            pq_enqueue(&rec);       /* pq_enqueue handles its own locking */
+            continue;
         }
         occupy_bed(bed_idx, rec.patient_id);
         pthread_mutex_unlock(&bed_mutex);
@@ -299,21 +335,26 @@ void *scheduler_thread(void *arg) {
         report_paging(rec.patient_id, care);
         report_fragmentation();
 
+        // TODO: priority aging not implemented - low priority patients may wait
+        // a long time if high priority patients keep arriving. Plan was to boost
+        // priority of queued patients every N seconds but modifying the queue
+        // safely while the scheduler holds the mutex risked deadlock.
+
         pid_t pid = fork();
         if (pid == 0) {
             char id[16], pri[16], bed[16];
-            snprintf(id, 16, "%d", rec.patient_id);
+            snprintf(id,  16, "%d", rec.patient_id);
             snprintf(pri, 16, "%d", rec.priority);
             snprintf(bed, 16, "%d", bed_idx);
-            char *argv[] = {"./patient_simulator", id, pri, bed, (char*)btype, NULL};
-            execv("./patient_simulator", argv);
+            char *args[] = {"./patient_simulator", id, pri, bed, (char*)btype, NULL};
+            execv("./patient_simulator", args);
             exit(1);
         } else if (pid > 0) {
             schedule_log[schedule_count].patient_id = rec.patient_id;
-            schedule_log[schedule_count].priority = rec.priority;
-            schedule_log[schedule_count].arrival = (double)rec.arrival_time;
-            schedule_log[schedule_count].start = start;
-            schedule_log[schedule_count].finish = start + 5.0;
+            schedule_log[schedule_count].priority   = rec.priority;
+            schedule_log[schedule_count].arrival    = (double)rec.arrival_time;
+            schedule_log[schedule_count].start      = start;
+            schedule_log[schedule_count].finish     = start + 5.0;
             schedule_count++;
         }
     }
@@ -323,10 +364,10 @@ void *scheduler_thread(void *arg) {
 void *nurse_thread(void *arg) {
     char *type = (char *)arg;
     printf("[NURSE] Started for %s\n", type);
-    
+
     int fd = open(DISCHARGE_FIFO, O_RDONLY);
     if (fd < 0) return NULL;
-    
+
     while (!shutdown_flag) {
         int pid, bid;
         if (read(fd, &pid, sizeof(int)) <= 0) {
@@ -334,7 +375,7 @@ void *nurse_thread(void *arg) {
             continue;
         }
         read(fd, &bid, sizeof(int));
-        
+
         if (bid < 0 || bid >= TOTAL_BEDS) continue;
         if (strcmp(ward_shared_memory->beds[bid].bed_type, type) != 0) continue;
 
@@ -345,9 +386,9 @@ void *nurse_thread(void *arg) {
         pthread_cond_broadcast(&bed_freed);
         pthread_mutex_unlock(&bed_mutex);
 
-        if (strcmp(type, "ICU") == 0) sem_post(sem_icu);
+        if (strcmp(type, "ICU") == 0)       sem_post(sem_icu);
         else if (strcmp(type, "ISOLATION") == 0) sem_post(sem_iso);
-        
+
         printf("[NURSE] %s bed %d freed | Total served: %d\n",
                type, bid, ward_shared_memory->total_served);
     }
@@ -358,14 +399,13 @@ void *nurse_thread(void *arg) {
 void setup_ipc(void) {
     shm_id = shmget(SHM_KEY, sizeof(SharedWard), IPC_CREAT | 0666);
     if (shm_id < 0) { perror("shmget"); exit(1); }
-    
+
     ward_shared_memory = shmat(shm_id, NULL, 0);
     if (ward_shared_memory == (void*)-1) { perror("shmat"); exit(1); }
     init_ward();
 
     unlink(DISCHARGE_FIFO);
-    if (mkfifo(DISCHARGE_FIFO, 0666) < 0) { perror("mkfifo"); exit(1); }
-
+    if (mkfifo(DISCHARGE_FIFO, 0666) < 0) { perror("mkfifo discharge"); exit(1); }
 
     unlink(INTAKE_FIFO);
     if (mkfifo(INTAKE_FIFO, 0666) < 0) { perror("mkfifo intake"); exit(1); }
@@ -373,11 +413,11 @@ void setup_ipc(void) {
     sem_unlink(SEM_ICU);
     sem_unlink(SEM_ISO);
     sem_unlink(SEM_QUEUE);
-    
-    sem_icu = sem_open(SEM_ICU, O_CREAT, 0666, ICU_BEDS);
-    sem_iso = sem_open(SEM_ISO, O_CREAT, 0666, ISOLATION_BEDS);
+
+    sem_icu   = sem_open(SEM_ICU,   O_CREAT, 0666, ICU_BEDS);
+    sem_iso   = sem_open(SEM_ISO,   O_CREAT, 0666, ISOLATION_BEDS);
     sem_queue = sem_open(SEM_QUEUE, O_CREAT, 0666, MAX_QUEUE);
-    
+
     if (sem_icu == SEM_FAILED || sem_iso == SEM_FAILED || sem_queue == SEM_FAILED) {
         perror("sem_open");
         exit(1);
@@ -395,29 +435,20 @@ void setStrategy(int argc, char *argv[]) {
     }
 }
 
-/* Cleanup IPC resources */
 void cleanup_ipc(void) {
     if (ward_shared_memory) {
         shmdt(ward_shared_memory);
         shmctl(shm_id, IPC_RMID, NULL);
     }
     unlink(DISCHARGE_FIFO);
-    
-    if (sem_icu != SEM_FAILED) {
-        sem_close(sem_icu);
-        sem_unlink(SEM_ICU);
-    }
-    if (sem_iso != SEM_FAILED) {
-        sem_close(sem_iso);
-        sem_unlink(SEM_ISO);
-    }
-    if (sem_queue != SEM_FAILED) {
-        sem_close(sem_queue);
-        sem_unlink(SEM_QUEUE);
-    }
+    unlink(INTAKE_FIFO);
+
+    if (sem_icu != SEM_FAILED) { sem_close(sem_icu); sem_unlink(SEM_ICU); }
+    if (sem_iso != SEM_FAILED) { sem_close(sem_iso); sem_unlink(SEM_ISO); }
+    if (sem_queue != SEM_FAILED) { sem_close(sem_queue); sem_unlink(SEM_QUEUE); }
+
     printf("[IPC] Cleanup complete\n");
 }
-
 
 int main(int argc, char *argv[]) {
     setStrategy(argc, argv);
@@ -426,12 +457,10 @@ int main(int argc, char *argv[]) {
 
     signal(SIGCHLD, sigchld_handler);
     signal(SIGTERM, sigterm_handler);
-    signal(SIGINT, sigterm_handler);
+    signal(SIGINT,  sigterm_handler);
 
     mkdir("logs", 0755);
     setup_ipc();
-
-    // printf("[DEBUG] sizeof(PatientRecord) = %zu\n", sizeof(PatientRecord));
 
     pthread_t t1, t2, t3, t4, t5;
     pthread_create(&t1, NULL, receptionist_thread, NULL);
@@ -449,8 +478,9 @@ int main(int argc, char *argv[]) {
     while (waitpid(-1, NULL, WNOHANG) > 0);
 
     write_schedule_log();
-    printf("[ADMIT] Done | Total served: %d\n", ward_shared_memory ? ward_shared_memory->total_served : 0);
-    
+    printf("[ADMIT] Done | Total served: %d\n",
+           ward_shared_memory ? ward_shared_memory->total_served : 0);
+
     cleanup_ipc();
     return 0;
 }
