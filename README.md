@@ -111,18 +111,18 @@ After running:
 
 | Concept | Implementation |
 |---------|-----------------|
-| fork() / execv() | Patient spawning (line 284-294 in admissions.c) |
-| SIGCHLD | Zombie reaping (line 188) |
-| Pipe (stdin) | triage.sh → admissions (line 242) |
-| Named FIFO | Discharge notifications (line 271-278) |
-| Shared Memory | Ward bitmap (shmget/shmat) (line 318-320) |
-| Mutex | Bed bitmap protection (line 298, 300, 306) |
-| Condition Variable | bed_freed signal (line 303, 309) |
-| Semaphores | ICU/Isolation limits, bounded queue (line 327-331) |
-| Priority Queue | Sorted linked list (line 172-190) |
-| Memory Allocation | Best/First/Worst-Fit (line 74, 85, 98) |
-| Coalescing | Left + right merge (line 128-145) |
-| Fragmentation | External & internal reporting (line 148-172) |
+| fork() / execv() | Patient spawning |
+| SIGCHLD | Zombie reaping |
+| Pipe (stdin) | triage.sh → admissions |
+| Named FIFO | Discharge notifications |
+| Shared Memory | Ward bitmap (shmget/shmat) |
+| Mutex | Bed bitmap protection  |
+| Condition Variable | bed_freed signal  |
+| Semaphores | ICU/Isolation limits, bounded queue  |
+| Priority Queue | Sorted linked list  |
+| Memory Allocation | Best/First/Worst-Fit  |
+| Coalescing | Left + right merge  |
+| Fragmentation | External & internal reporting  |
 
 ## Testing
 
