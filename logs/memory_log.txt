@@ -1,0 +1,4 @@
+Free=19 Largest=16 ExtFrag=15.8%
+Free=19 Largest=16 ExtFrag=15.8%
+Free=16 Largest=16 ExtFrag=0.0%
+Free=23 Largest=23 ExtFrag=0.0%

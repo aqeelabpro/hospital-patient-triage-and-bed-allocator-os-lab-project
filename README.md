@@ -75,14 +75,14 @@ After running:
 ```
 .
 ├── src/
-│   ├── admissions.c          (457 lines) - Central manager, threads, memory
-│   ├── patient_simulator.c   (82 lines)  - Patient lifecycle simulation
-│   └── hospital.h            (122 lines) - Shared structs & constants
+│   ├── admissions.c           - Central manager, threads, memory
+│   ├── patient_simulator.c    - Patient lifecycle simulation
+│   └── hospital.h             - Shared structs & constants
 ├── scripts/
-│   ├── triage.sh             (75 lines)  - Patient triage & validation
-│   ├── start_hospital.sh     (51 lines)  - IPC setup & launch
-│   ├── stop_hospital.sh      (50 lines)  - Graceful shutdown
-│   └── stress_test.sh        (34 lines)  - 20 rapid arrivals
+│   ├── triage.sh               - Patient triage & validation
+│   ├── start_hospital.sh       - IPC setup & launch
+│   ├── stop_hospital.sh        - Graceful shutdown
+│   └── stress_test.sh          - 20 rapid arrivals
 ├── Makefile
 └── README.md
 ```
