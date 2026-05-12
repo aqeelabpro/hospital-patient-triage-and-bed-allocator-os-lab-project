@@ -304,28 +304,25 @@ void *scheduler_thread(void *arg) {
         if (strcmp(btype, "ICU") == 0)       cap = sem_icu;
         if (strcmp(btype, "ISOLATION") == 0) cap = sem_iso;
 
-        /* Try to acquire capacity semaphore without blocking.
-         * If the ward is full, re-enqueue the patient and move on
-         * so lower-priority patients in other wards are not starved. */
+        // re-enqueue if full
         if (cap) {
             if (sem_trywait(cap) != 0) {
                 printf("[SCHED] Patient %d: %s full, re-queuing\n",
                        rec.patient_id, btype);
                 sleep(1);
-                pq_enqueue(&rec);   /* pq_enqueue handles its own locking */
+                pq_enqueue(&rec);
                 continue;
             }
         }
 
-        /* Find and occupy a bed. If none found (should not happen after
-         * semaphore check, but guard anyway), release semaphore and re-queue. */
+        // release semaphor if bed not found
         pthread_mutex_lock(&bed_mutex);
         int bed_idx = allocate_bed(care, btype);
         if (bed_idx == -1) {
             pthread_mutex_unlock(&bed_mutex);
             if (cap) sem_post(cap);
             sleep(1);
-            pq_enqueue(&rec);       /* pq_enqueue handles its own locking */
+            pq_enqueue(&rec);
             continue;
         }
         occupy_bed(bed_idx, rec.patient_id);
