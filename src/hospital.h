@@ -48,6 +48,7 @@
 #define SEM_ICU         "/sem_icu_limit"
 #define SEM_ISO         "/sem_iso_limit"
 #define SEM_QUEUE       "/sem_queue_bound"
+#define INTAKE_FIFO     "/tmp/intake_fifo"
 
 #define STRAT_BEST  0
 #define STRAT_FIRST 1

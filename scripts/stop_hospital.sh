@@ -23,9 +23,11 @@ echo "Patient processes stopped"
 ipcrm -M 0xbedf00d 2>/dev/null
 echo "Shared memory cleaned"
 
-# Clean up FIFO
+# Clean up FIFOs
 rm -f /tmp/discharge_fifo
-echo "FIFO cleaned"
+rm -f /tmp/intake_fifo
+rm -f /tmp/intake_fifo.lock
+echo "FIFOs cleaned"
 
 # Clean up semaphores
 rm -f /dev/shm/sem_icu_limit

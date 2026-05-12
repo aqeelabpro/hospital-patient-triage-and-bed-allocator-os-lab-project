@@ -11,10 +11,11 @@ fi
 echo "  Hospital Triage System Starting"
 echo "  Strategy: $STRATEGY"
 
-# Remove System V Process Shared Memory
+# Remove any leftover shared memory and FIFOs
 ipcrm -M 0xbedf00d 2>/dev/null
-
 rm -f /tmp/discharge_fifo
+rm -f /tmp/intake_fifo
+rm -f /tmp/intake_fifo.lock
 
 mkdir -p logs
 
@@ -32,16 +33,23 @@ fi
 PID=$!
 
 echo $PID > /tmp/hospital_pid
-
 echo "Admissions manager started (PID=$PID)"
 
-# Wait for FIFO to be created
+# Wait for both FIFOs to be created by admissions
 sleep 1
 
-if [ -p /tmp/discharge_fifo ]; then
-    echo "System ready. FIFO created."
-else
-    echo "WARNING: FIFO not ready yet"
+READY=1
+if [ ! -p /tmp/discharge_fifo ]; then
+    echo "WARNING: discharge FIFO not ready"
+    READY=0
+fi
+if [ ! -p /tmp/intake_fifo ]; then
+    echo "WARNING: intake FIFO not ready"
+    READY=0
+fi
+
+if [ "$READY" -eq 1 ]; then
+    echo "System ready. Both FIFOs created."
 fi
 
 echo "Ward: 4 ICU | 4 Isolation | 12 General"

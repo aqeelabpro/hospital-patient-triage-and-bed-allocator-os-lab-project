@@ -103,20 +103,21 @@ void free_bed(int bed_idx) {
     for (int u = b->start_unit; u < b->start_unit + b->size; u++)
         ward_shared_memory->ward[u] = -1;
     
-    /* Coalesce left */
+    /*
+    Incomplete
+
+    // Coalesce left
     if (bed_idx > 0 && ward_shared_memory->beds[bed_idx-1].is_free && 
         strcmp(ward_shared_memory->beds[bed_idx-1].bed_type, b->bed_type) == 0) {
-        ward_shared_memory->beds[bed_idx-1].size += b->size;
-        b->size = 0;
-        b = &ward_shared_memory->beds[bed_idx-1];
+       
     }
-    /* Coalesce right */
+    // Coalesce right
     if (bed_idx + 1 < TOTAL_BEDS && ward_shared_memory->beds[bed_idx+1].is_free && 
         strcmp(ward_shared_memory->beds[bed_idx+1].bed_type, b->bed_type) == 0 && 
-        ward_shared_memory->beds[bed_idx+1].size > 0) {
-        b->size += ward_shared_memory->beds[bed_idx+1].size;
-        ward_shared_memory->beds[bed_idx+1].size = 0;
+       
     }
+    */
+    
     printf("[COALESCE] Bed %d freed\n", bed_idx);
 }
 
@@ -225,21 +226,27 @@ void *receptionist_thread(void *arg) {
     (void)arg;
     printf("[RECEPT] Started\n");
     PatientRecord rec;
-    
+
+    int fd = open(INTAKE_FIFO, O_RDONLY);
+    if (fd < 0) { perror("[RECEPT] open intake FIFO"); return NULL; }
+
     while (!shutdown_flag) {
-        if (read(STDIN_FILENO, &rec, sizeof(PatientRecord)) <= 0) {
+        ssize_t n = read(fd, &rec, sizeof(PatientRecord));
+        if (n <= 0) {
+            if (shutdown_flag) break;
             sleep(1);
             continue;
         }
         rec.patient_id = next_patient_id++;
         rec.arrival_time = time(NULL);
-        
+
         printf("[RECEPT] Patient %d (%s) Priority=%d\n",
                rec.patient_id, rec.name, rec.priority);
-        
+
         sem_wait(sem_queue);
         pq_enqueue(&rec);
     }
+    close(fd);
     return NULL;
 }
 
@@ -359,6 +366,10 @@ void setup_ipc(void) {
     unlink(DISCHARGE_FIFO);
     if (mkfifo(DISCHARGE_FIFO, 0666) < 0) { perror("mkfifo"); exit(1); }
 
+
+    unlink(INTAKE_FIFO);
+    if (mkfifo(INTAKE_FIFO, 0666) < 0) { perror("mkfifo intake"); exit(1); }
+
     sem_unlink(SEM_ICU);
     sem_unlink(SEM_ISO);
     sem_unlink(SEM_QUEUE);
@@ -419,6 +430,8 @@ int main(int argc, char *argv[]) {
 
     mkdir("logs", 0755);
     setup_ipc();
+
+    // printf("[DEBUG] sizeof(PatientRecord) = %zu\n", sizeof(PatientRecord));
 
     pthread_t t1, t2, t3, t4, t5;
     pthread_create(&t1, NULL, receptionist_thread, NULL);

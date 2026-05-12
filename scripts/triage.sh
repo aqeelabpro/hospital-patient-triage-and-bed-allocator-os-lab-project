@@ -1,7 +1,7 @@
 #!/bin/bash
 # Hospital Patient Triage & Bed Allocator - triage.sh
 # Group 22 | Members: Member1 (24P-0514), Member2 (24P-0666)
-# Validates patient input and sends to admissions
+# Validates patient input and sends to admissions via intake FIFO
 
 if [ $# -ne 3 ]; then
     echo "Usage: ./triage.sh <name> <age> <severity>"
@@ -46,18 +46,17 @@ echo "Severity : $SEVERITY / 10"
 echo "Priority : $PRIORITY"
 echo "Time     : $(date)"
 
-# Check if hospital is running
-if [ ! -p /tmp/discharge_fifo ]; then
-    echo "ERROR: Hospital not running"
+# Check if hospital is running (intake FIFO must exist)
+if [ ! -p /tmp/intake_fifo ]; then
+    echo "ERROR: Hospital not running (intake FIFO not found)"
     exit 1
 fi
 
-# Pack and pipe patient record to admissions
 python3 -c "
-import struct, sys
+import struct, fcntl
 
-name = '$NAME'[:63].encode().ljust(64, b'\x00')
-age = $AGE
+name     = '$NAME'[:63].encode().ljust(64, b'\x00')
+age      = $AGE
 severity = $SEVERITY
 priority = $PRIORITY
 
@@ -68,8 +67,24 @@ elif priority == 3:
 else:
     care = 1
 
-data = struct.pack('i64siiiiql', 0, name, age, severity, priority, care, $ARRIVAL, 0)
-sys.stdout.buffer.write(data)
-" | ./admissions &
+# 'i64siiii4xq' matches C struct layout with padding:
+# i    = patient_id (4)
+# 64s  = name (64)
+# i    = age (4)
+# i    = severity (4)
+# i    = priority (4)
+# i    = care_units (4)
+# 4x   = 4 padding bytes (compiler inserts before time_t)
+# q    = arrival_time (8)
+# Total = 96 bytes, matching sizeof(PatientRecord)
+data = struct.pack('i64siiii4xq', 0, name, age, severity, priority, care, $ARRIVAL)
+
+with open('/tmp/intake_fifo.lock', 'w') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    with open('/tmp/intake_fifo', 'wb') as f:
+        f.write(data)
+        f.flush()
+    fcntl.flock(lock, fcntl.LOCK_UN)
+"
 
 echo "Patient record sent"
