@@ -1,10 +1,4 @@
 # Hospital Patient Triage & Bed Allocator
-
-**Project:** CL2006 Operating Systems Lab Semester Project  
-**Group:** Group 22  
-**Members:** Member1 (24P-0514), Member2 (24P-0666)  
-**Date:** Spring 2026
-
 ## Overview
 
 A C-based system-level simulation of a hospital emergency room that integrates core OS concepts:
